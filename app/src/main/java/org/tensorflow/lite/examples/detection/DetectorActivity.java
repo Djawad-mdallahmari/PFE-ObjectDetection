@@ -27,12 +27,15 @@ import android.graphics.RectF;
 import android.graphics.Typeface;
 import android.media.ImageReader.OnImageAvailableListener;
 import android.os.SystemClock;
+import android.speech.tts.TextToSpeech;
 import android.util.Size;
 import android.util.TypedValue;
 import android.widget.Toast;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
+
 import org.tensorflow.lite.examples.detection.customview.OverlayView;
 import org.tensorflow.lite.examples.detection.customview.OverlayView.DrawCallback;
 import org.tensorflow.lite.examples.detection.env.BorderedText;
@@ -81,6 +84,9 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
   private MultiBoxTracker tracker;
 
   private BorderedText borderedText;
+
+  private TextToSpeech tts;
+  private String readedText = "";
 
   @Override
   public void onPreviewSizeChosen(final Size size, final int rotation) {
@@ -149,6 +155,17 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
 
   @Override
   protected void processImage() {
+    //Put elsewehre
+    if(tts == null){
+      tts = new TextToSpeech(this, new TextToSpeech.OnInitListener() {
+        @Override
+        public void onInit(int status) {
+
+        }
+      });
+      tts.setLanguage(Locale.US); // TODO : put in french. (But model's metadata (labels) are in english !)
+    }
+
     ++timestamp;
     final long currTimestamp = timestamp;
     trackingOverlay.postInvalidate();
@@ -222,6 +239,10 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
                     showFrameInfo(previewWidth + "x" + previewHeight);
                     showCropInfo(cropCopyBitmap.getWidth() + "x" + cropCopyBitmap.getHeight());
                     showInference(lastProcessingTimeMs + "ms");
+                    if(!tts.isSpeaking() && !readedText.equals(results.get(0).getTitle())){
+                      tts.speak(results.get(0).getTitle(), TextToSpeech.QUEUE_FLUSH, null, null); // TODO : work on this later
+                      readedText = results.get(0).getTitle();
+                    }
                   }
                 });
           }
