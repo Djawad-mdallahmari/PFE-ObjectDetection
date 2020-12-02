@@ -87,6 +87,7 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
 
   private TextToSpeech tts;
   private String readedText = "";
+  private RectF viseur;
 
   @Override
   public void onPreviewSizeChosen(final Size size, final int rotation) {
@@ -166,6 +167,9 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
       tts.setLanguage(Locale.US); // TODO : put in french. (But model's metadata (labels) are in english !)
     }
 
+    viseur = new RectF(100.0f,100.0f,8.0f,200.0f);
+
+
     ++timestamp;
     final long currTimestamp = timestamp;
     trackingOverlay.postInvalidate();
@@ -204,6 +208,12 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
             paint.setColor(Color.RED);
             paint.setStyle(Style.STROKE);
             paint.setStrokeWidth(2.0f);
+            Bitmap viseurBitmap = Bitmap.createBitmap(300,300,Config.ARGB_8888);
+            final Canvas canvasViseur = new Canvas(viseurBitmap);
+            canvasViseur.drawColor(Color.GREEN);
+            final Paint paintViseur = new Paint();
+            paintViseur.setColor(Color.YELLOW);
+            paintViseur.setStyle(Style.FILL);
 
             float minimumConfidence = MINIMUM_CONFIDENCE_TF_OD_API;
             switch (MODE) {
@@ -220,6 +230,7 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
               if (location != null && result.getConfidence() >= minimumConfidence) {
                 canvas.drawRect(location, paint);
 
+                canvasViseur.drawRect(viseur,paintViseur);
                 cropToFrameTransform.mapRect(location);
 
                 result.setLocation(location);
