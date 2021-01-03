@@ -23,6 +23,7 @@ import android.graphics.Color;
 import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.Paint.Style;
+import android.graphics.Point;
 import android.graphics.RectF;
 import android.graphics.Typeface;
 import android.media.ImageReader.OnImageAvailableListener;
@@ -167,7 +168,16 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
       tts.setLanguage(Locale.US); // TODO : put in french. (But model's metadata (labels) are in english !)
     }
 
-    viseur = new RectF(100.0f,100.0f,8.0f,200.0f);
+    /*float centreX = trackingOverlay.getX() + trackingOverlay.getWidth()  / 2;
+    float centreY = trackingOverlay.getY() + trackingOverlay.getHeight() / 2;
+    Point centerOfCanvas = new Point((int)centreX, (int)centreY);
+    float left = (centerOfCanvas.x - (100 >> 1))>>2;
+    float top = (centerOfCanvas.y - (100 >> 1))>>2;
+    float right = (centerOfCanvas.x + (100 >> 1))>>2;
+    float bottom = (centerOfCanvas.y + (100 >> 1))>>2;
+    System.out.println(left+" "+top+" "+right+" "+bottom);
+    viseur = new RectF(left,top,right,bottom);*/
+    viseur = new RectF(140,180,160,200);
 
 
     ++timestamp;
@@ -208,12 +218,8 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
             paint.setColor(Color.RED);
             paint.setStyle(Style.STROKE);
             paint.setStrokeWidth(2.0f);
-            Bitmap viseurBitmap = Bitmap.createBitmap(300,300,Config.ARGB_8888);
-            final Canvas canvasViseur = new Canvas(viseurBitmap);
-            canvasViseur.drawColor(Color.GREEN);
-            final Paint paintViseur = new Paint();
-            paintViseur.setColor(Color.YELLOW);
-            paintViseur.setStyle(Style.FILL);
+            Detector.Recognition viseurReco = new Detector.Recognition("viseur","viseur",1.0f,viseur);
+            results.add(viseurReco);
 
             float minimumConfidence = MINIMUM_CONFIDENCE_TF_OD_API;
             switch (MODE) {
@@ -230,7 +236,6 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
               if (location != null && result.getConfidence() >= minimumConfidence) {
                 canvas.drawRect(location, paint);
 
-                canvasViseur.drawRect(viseur,paintViseur);
                 cropToFrameTransform.mapRect(location);
 
                 result.setLocation(location);
@@ -250,10 +255,13 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
                     showFrameInfo(previewWidth + "x" + previewHeight);
                     showCropInfo(cropCopyBitmap.getWidth() + "x" + cropCopyBitmap.getHeight());
                     showInference(lastProcessingTimeMs + "ms");
-                    if(!tts.isSpeaking() && !readedText.equals(results.get(0).getTitle())){
-                      tts.speak(results.get(0).getTitle(), TextToSpeech.QUEUE_FLUSH, null, null); // TODO : work on this later
-                      readedText = results.get(0).getTitle();
+                    if(results.get(0).getLocation().contains(viseur)){
+                      if(!tts.isSpeaking() && !readedText.equals(results.get(0).getTitle())){
+                        tts.speak(results.get(0).getTitle(), TextToSpeech.QUEUE_FLUSH, null, null); // TODO : work on this later
+                        readedText = results.get(0).getTitle();
+                      }
                     }
+
                   }
                 });
           }
