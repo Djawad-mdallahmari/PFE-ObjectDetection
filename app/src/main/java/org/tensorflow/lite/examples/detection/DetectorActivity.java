@@ -16,6 +16,7 @@
 
 package org.tensorflow.lite.examples.detection;
 
+import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.Bitmap.Config;
 import android.graphics.Canvas;
@@ -27,7 +28,10 @@ import android.graphics.Point;
 import android.graphics.RectF;
 import android.graphics.Typeface;
 import android.media.ImageReader.OnImageAvailableListener;
+import android.os.Build;
 import android.os.SystemClock;
+import android.os.VibrationEffect;
+import android.os.Vibrator;
 import android.speech.tts.TextToSpeech;
 import android.util.Size;
 import android.util.TypedValue;
@@ -89,6 +93,7 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
   private TextToSpeech tts;
   private String readedText = "";
   private RectF viseur;
+  private Vibrator vibrator;
 
   @Override
   public void onPreviewSizeChosen(final Size size, final int rotation) {
@@ -153,6 +158,7 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
         });
 
     tracker.setFrameConfiguration(previewWidth, previewHeight, sensorOrientation);
+    vibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
   }
 
   @Override
@@ -178,6 +184,7 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
     System.out.println(left+" "+top+" "+right+" "+bottom);
     viseur = new RectF(left,top,right,bottom);*/
     viseur = new RectF(140,180,160,200);
+    //viseur = new RectF(100,200,260,260);
 
 
     ++timestamp;
@@ -255,12 +262,36 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
                     showFrameInfo(previewWidth + "x" + previewHeight);
                     showCropInfo(cropCopyBitmap.getWidth() + "x" + cropCopyBitmap.getHeight());
                     showInference(lastProcessingTimeMs + "ms");
-                    if(results.get(0).getLocation().contains(viseur)){
-                      if(!tts.isSpeaking() && !readedText.equals(results.get(0).getTitle())){
-                        tts.speak(results.get(0).getTitle(), TextToSpeech.QUEUE_FLUSH, null, null); // TODO : work on this later
-                        readedText = results.get(0).getTitle();
+                    for (Detector.Recognition r :results) {
+                      if(r.getConfidence() >= MINIMUM_CONFIDENCE_TF_OD_API){
+                        System.out.println(r.getTitle()+" "+r.getLocation().toShortString()+ " | " + viseur.toShortString() + " | "+r.getLocation().centerX()+" , "+r.getLocation().centerY());
+                        if(!r.equals(viseurReco))
+                          //Si le viseur est dans l'objet détecté -> Vibre
+                          if(r.getLocation().contains(viseurReco.getLocation())){
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                              vibrator.vibrate(VibrationEffect.createOneShot(500,VibrationEffect.DEFAULT_AMPLITUDE));
+                              System.out.println(r.getTitle()+" "+r.getLocation().toShortString()+ " | " + viseur.toShortString() + " | "+viseur.centerX()+" , "+viseur.centerY());
+                            }else{
+                              vibrator.vibrate(500);
+                            }
+
+                            if(!tts.isSpeaking() && !readedText.equals(r.getTitle())){
+                              tts.speak(r.getTitle(), TextToSpeech.QUEUE_FLUSH, null, null);
+                              readedText = r.getTitle();
+                            }
+
+                          /*//Si le viseur est au centre de l'objet -> Enoncé
+                          if(viseurReco.getLocation().contains(r.getLocation().centerX(),r.getLocation().centerY())){
+                            if(!tts.isSpeaking() && !readedText.equals(r.getTitle())){
+                              tts.speak(r.getTitle(), TextToSpeech.QUEUE_FLUSH, null, null);
+                              readedText = r.getTitle();
+                            }
+                          }*/
+                          }
+
                       }
                     }
+
 
                   }
                 });
