@@ -43,6 +43,7 @@ import java.util.Locale;
 
 import org.tensorflow.lite.examples.detection.customview.OverlayView;
 import org.tensorflow.lite.examples.detection.customview.OverlayView.DrawCallback;
+import org.tensorflow.lite.examples.detection.customview.RecognitionScoreView;
 import org.tensorflow.lite.examples.detection.env.BorderedText;
 import org.tensorflow.lite.examples.detection.env.ImageUtils;
 import org.tensorflow.lite.examples.detection.env.Logger;
@@ -60,11 +61,11 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
   // Configuration values for the prepackaged SSD model.
   private static final int TF_OD_API_INPUT_SIZE = 300;
   private static final boolean TF_OD_API_IS_QUANTIZED = true;
-  private static final String TF_OD_API_MODEL_FILE = "detect.tflite";
-  private static final String TF_OD_API_LABELS_FILE = "labelmap.txt";
+  private static final String TF_OD_API_MODEL_FILE = "detect.tflite"; // Le modèle en format tflite
+  private static final String TF_OD_API_LABELS_FILE = "labelmap.txt"; // Les labels accompagnant le modèle
   private static final DetectorMode MODE = DetectorMode.TF_OD_API;
   // Minimum detection confidence to track a detection.
-  private static final float MINIMUM_CONFIDENCE_TF_OD_API = 0.5f;
+  private static final float MINIMUM_CONFIDENCE_TF_OD_API = 0.5f; // Le niveau de precision minimum en % (entre 0 et 1)
   private static final boolean MAINTAIN_ASPECT = false;
   private static final Size DESIRED_PREVIEW_SIZE = new Size(640, 480);
   private static final boolean SAVE_PREVIEW_BITMAP = false;
@@ -90,13 +91,14 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
 
   private BorderedText borderedText;
 
-  private TextToSpeech tts;
-  private String readedText = "";
-  private RectF viseur;
-  private Vibrator vibrator;
+  private TextToSpeech tts; // L'objet permettant de faire de la synthèse vocale
+  private String readedText = ""; // Variable utilisé pour stoquer le dernier label de l'objet prononcé
+  private RectF viseur; // Utilisé pour représenté le rectangle du viseur
+  private Vibrator vibrator; // Pour la vibration
 
   @Override
   public void onPreviewSizeChosen(final Size size, final int rotation) {
+    //On entre dans cette fonction qu'une fois au début pour initaliser la taille des input, le détecteur, l'orientation de la camera, ...
     final float textSizePx =
         TypedValue.applyDimension(
             TypedValue.COMPLEX_UNIT_DIP, TEXT_SIZE_DIP, getResources().getDisplayMetrics());
@@ -162,8 +164,8 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
   }
 
   @Override
-  protected void processImage() {
-    //Put elsewehre
+  protected void processImage() { // On entre dans cette fonction dès qu'une image (frame) est disponible <=> très fréquemment
+    //Put elsewehre (TODO : à mettre au dessus pour être initialisé qu'une fois)
     if(tts == null){
       tts = new TextToSpeech(this, new TextToSpeech.OnInitListener() {
         @Override
@@ -174,17 +176,20 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
       tts.setLanguage(Locale.US); // TODO : put in french. (But model's metadata (labels) are in english !)
     }
 
-    /*float centreX = trackingOverlay.getX() + trackingOverlay.getWidth()  / 2;
-    float centreY = trackingOverlay.getY() + trackingOverlay.getHeight() / 2;
-    Point centerOfCanvas = new Point((int)centreX, (int)centreY);
-    float left = (centerOfCanvas.x - (100 >> 1))>>2;
-    float top = (centerOfCanvas.y - (100 >> 1))>>2;
-    float right = (centerOfCanvas.x + (100 >> 1))>>2;
-    float bottom = (centerOfCanvas.y + (100 >> 1))>>2;
-    System.out.println(left+" "+top+" "+right+" "+bottom);
-    viseur = new RectF(left,top,right,bottom);*/
+    //Ci-dessous les tentatives que j'ai faites obtenir le centre de l'écran... à revoir
+
+    //System.out.println(left+" "+top+" "+right+" "+bottom);
+    //viseur = new RectF(left,top,right,bottom);
     viseur = new RectF(140,180,160,200);
-    //viseur = new RectF(100,200,260,260);
+    /*int mWidth= this.getResources().getDisplayMetrics().widthPixels;
+    int mHeight= this.getResources().getDisplayMetrics().heightPixels;
+    viseur = new RectF(mWidth/2-100,mHeight/4-100,mWidth/2+100,mHeight/4+100);*/
+    /*System.out.println("["+trackingOverlay.getLeft()+"] ["+trackingOverlay.getTop()+"] ["+trackingOverlay.getRight()+"] ["+trackingOverlay.getBottom()+"]");
+    viseur = new RectF(trackingOverlay.getLeft()+(trackingOverlay.getRight()-trackingOverlay.getLeft())/3, //360
+            trackingOverlay.getTop()+(trackingOverlay.getBottom()-trackingOverlay.getTop())/3, //673
+            trackingOverlay.getRight()-(trackingOverlay.getRight()-trackingOverlay.getLeft())/3, //720
+            trackingOverlay.getBottom()-(trackingOverlay.getBottom()-trackingOverlay.getTop())/3); //1346*/
+    
 
 
     ++timestamp;
@@ -216,15 +221,17 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
           public void run() {
             LOGGER.i("Running detection on image " + currTimestamp);
             final long startTime = SystemClock.uptimeMillis();
-            final List<Detector.Recognition> results = detector.recognizeImage(croppedBitmap);
+            final List<Detector.Recognition> results = detector.recognizeImage(croppedBitmap); //La reconnaissance est lancé ici, on recupere la liste des résultats (results)
             lastProcessingTimeMs = SystemClock.uptimeMillis() - startTime;
 
+            //Pour les boites englobantes
             cropCopyBitmap = Bitmap.createBitmap(croppedBitmap);
             final Canvas canvas = new Canvas(cropCopyBitmap);
             final Paint paint = new Paint();
             paint.setColor(Color.RED);
             paint.setStyle(Style.STROKE);
             paint.setStrokeWidth(2.0f);
+            // Pour que le rectangle du viseur affiché, je l'ajoute dans la liste des résultats (pas top)
             Detector.Recognition viseurReco = new Detector.Recognition("viseur","viseur",1.0f,viseur);
             results.add(viseurReco);
 
@@ -243,6 +250,7 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
               if (location != null && result.getConfidence() >= minimumConfidence) {
                 canvas.drawRect(location, paint);
 
+                //if(!result.equals(viseurReco))
                 cropToFrameTransform.mapRect(location);
 
                 result.setLocation(location);
@@ -262,21 +270,18 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
                     showFrameInfo(previewWidth + "x" + previewHeight);
                     showCropInfo(cropCopyBitmap.getWidth() + "x" + cropCopyBitmap.getHeight());
                     showInference(lastProcessingTimeMs + "ms");
+
+                    // Ici est la boucle de traitement des résultats
                     for (Detector.Recognition r :results) {
                       if(r.getConfidence() >= MINIMUM_CONFIDENCE_TF_OD_API){
                         System.out.println(r.getTitle()+" "+r.getLocation().toShortString()+ " | " + viseur.toShortString() + " | "+r.getLocation().centerX()+" , "+r.getLocation().centerY());
-                        if(!r.equals(viseurReco))
-                          //Si le viseur est dans l'objet détecté -> Vibre
-                          if(r.getLocation().contains(viseurReco.getLocation())){
-                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                              vibrator.vibrate(VibrationEffect.createOneShot(500,VibrationEffect.DEFAULT_AMPLITUDE));
-                              System.out.println(r.getTitle()+" "+r.getLocation().toShortString()+ " | " + viseur.toShortString() + " | "+viseur.centerX()+" , "+viseur.centerY());
-                            }else{
-                              vibrator.vibrate(500);
-                            }
+                        if(!r.equals(viseurReco)) // Si c'est PAS le viseur (car viseur ajouté dans la liste des résultats pour qu'il soit affiché, voir plus haut)
 
-                            if(!tts.isSpeaking() && !readedText.equals(r.getTitle())){
-                              tts.speak(r.getTitle(), TextToSpeech.QUEUE_FLUSH, null, null);
+                          if(r.getLocation().contains(viseurReco.getLocation())){ //Si le viseur est dans l'objet détecté -> Vibre
+
+                            if(!tts.isSpeaking() && !readedText.equals(r.getTitle())){ // Si on ne parle pas ET que ce n'est pas le même (TODO: enlever condition pas le même -> in/out du rect)
+                              tts.speak(r.getTitle(), TextToSpeech.QUEUE_FLUSH, null, null); // Synthetiseur prononce le label de l'objet
+                              vibrator.vibrate(200); // Vibre
                               readedText = r.getTitle();
                             }
 
