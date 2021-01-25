@@ -82,9 +82,10 @@ public abstract class CameraActivity extends AppCompatActivity
 
   protected TextView frameValueTextView, cropValueTextView, inferenceTimeTextView;
   protected ImageView bottomSheetArrowImageView;
-  private ImageView plusImageView, minusImageView;
+  private ImageView plusImageView, minusImageView, plusSeuilImageView, minusSeuilImageView;
   private SwitchCompat apiSwitchCompat;
   private TextView threadsTextView;
+  private TextView seuilTextView;
 
   @Override
   protected void onCreate(final Bundle savedInstanceState) {
@@ -104,8 +105,11 @@ public abstract class CameraActivity extends AppCompatActivity
     }
 
     threadsTextView = findViewById(R.id.threads);
+    seuilTextView = findViewById(R.id.seuil);
     plusImageView = findViewById(R.id.plus);
     minusImageView = findViewById(R.id.minus);
+    plusSeuilImageView = findViewById(R.id.plusSeuil);
+    minusSeuilImageView = findViewById(R.id.minusSeuil);
     apiSwitchCompat = findViewById(R.id.api_info_switch);
     bottomSheetLayout = findViewById(R.id.bottom_sheet_layout);
     gestureLayout = findViewById(R.id.gesture_layout);
@@ -167,6 +171,8 @@ public abstract class CameraActivity extends AppCompatActivity
 
     plusImageView.setOnClickListener(this);
     minusImageView.setOnClickListener(this);
+    plusSeuilImageView.setOnClickListener(this);
+    minusSeuilImageView.setOnClickListener(this);
   }
 
   protected int[] getRgbBytes() {
@@ -510,6 +516,7 @@ public abstract class CameraActivity extends AppCompatActivity
       int numThreads = Integer.parseInt(threads);
       if (numThreads >= 9) return;
       numThreads++;
+      System.out.println("numThreads: "+numThreads);
       threadsTextView.setText(String.valueOf(numThreads));
       setNumThreads(numThreads);
     } else if (v.getId() == R.id.minus) {
@@ -521,6 +528,23 @@ public abstract class CameraActivity extends AppCompatActivity
       numThreads--;
       threadsTextView.setText(String.valueOf(numThreads));
       setNumThreads(numThreads);
+    } else if (v.getId() == R.id.plusSeuil) {
+      String seuil = seuilTextView.getText().toString().trim();
+      int numSeuil = Integer.parseInt(seuil);
+      if (numSeuil >= 90) return;
+      numSeuil+=10;
+      System.out.println("numSeuil: "+numSeuil);
+      seuilTextView.setText(String.valueOf(numSeuil));
+      setNumSeuil(numSeuil);
+    } else if (v.getId() == R.id.minusSeuil) {
+      String seuil = seuilTextView.getText().toString().trim();
+      int numSeuil = Integer.parseInt(seuil);
+      if (numSeuil == 10) {
+        return;
+      }
+      numSeuil-=10;
+      seuilTextView.setText(String.valueOf(numSeuil));
+      setNumSeuil(numSeuil);
     }
   }
 
@@ -545,6 +569,8 @@ public abstract class CameraActivity extends AppCompatActivity
   protected abstract Size getDesiredPreviewFrameSize();
 
   protected abstract void setNumThreads(int numThreads);
+
+  protected abstract void setNumSeuil(int numSeuil);
 
   protected abstract void setUseNNAPI(boolean isChecked);
 }

@@ -66,7 +66,7 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
   private static final String TF_OD_API_LABELS_FILE = "labelmap.txt"; // Les labels accompagnant le modèle
   private static final DetectorMode MODE = DetectorMode.TF_OD_API;
   // Minimum detection confidence to track a detection.
-  private static final float MINIMUM_CONFIDENCE_TF_OD_API = 0.5f; // Le niveau de precision minimum en % (entre 0 et 1)
+  private static float MINIMUM_CONFIDENCE_TF_OD_API = 0.5f; // Le niveau de precision minimum en % (entre 0 et 1)
   private static final boolean MAINTAIN_ASPECT = false;
   private static final Size DESIRED_PREVIEW_SIZE = new Size(640, 480);
   private static final boolean SAVE_PREVIEW_BITMAP = false;
@@ -266,6 +266,7 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
 
             computingDetection = false;
 
+            float finalMinimumConfidence = minimumConfidence;
             runOnUiThread(
                 new Runnable() {
                   @Override
@@ -276,7 +277,7 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
 
                     // Ici est la boucle de traitement des résultats
                     for (Detector.Recognition r :results) {
-                      if(r.getConfidence() >= MINIMUM_CONFIDENCE_TF_OD_API){
+                      if(r.getConfidence() >= finalMinimumConfidence){
                         System.out.println(r.getTitle()+" "+r.getLocation().toShortString()+ " | " + viseur.toShortString() + " | "+r.getLocation().centerX()+" , "+r.getLocation().centerY());
                         if(!r.equals(viseurReco)) // Si c'est PAS le viseur (car viseur ajouté dans la liste des résultats pour qu'il soit affiché, voir plus haut)
 
@@ -362,5 +363,25 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
                 });
           }
         });
+  }
+
+  @Override
+  protected void setNumSeuil(int numSeuil) {
+    runInBackground(
+            () -> {
+              try {
+                MINIMUM_CONFIDENCE_TF_OD_API = numSeuil/100f;
+                runOnUiThread(
+                        () -> {
+                          Toast.makeText(this, "Seuil : "+numSeuil+"%", Toast.LENGTH_LONG).show();
+                        });
+              } catch (IllegalArgumentException e) {
+                LOGGER.e(e, "Failed to set seuil.");
+                runOnUiThread(
+                        () -> {
+                          Toast.makeText(this, e.getMessage(), Toast.LENGTH_LONG).show();
+                        });
+              }
+            });
   }
 }
