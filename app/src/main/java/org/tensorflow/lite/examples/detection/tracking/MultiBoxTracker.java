@@ -142,15 +142,17 @@ public class MultiBoxTracker {
 
       float cornerSize = Math.min(trackedPos.width(), trackedPos.height()) / 8.0f;
       canvas.drawRoundRect(trackedPos, cornerSize, cornerSize, boxPaint);
-
+      String replaced = recognition.title.equals("viseur") //On évite d'afficher le pourcentage du viseur
+                                                      ? String.format("%s",recognition.title)
+                                                      : String.format("%s %.2f", recognition.title, (100 * recognition.detectionConfidence));
       final String labelString =
           !TextUtils.isEmpty(recognition.title)
-              ? String.format("%s %.2f", recognition.title, (100 * recognition.detectionConfidence))
+              ? replaced
               : String.format("%.2f", (100 * recognition.detectionConfidence));
       //            borderedText.drawText(canvas, trackedPos.left + cornerSize, trackedPos.top,
       // labelString);
       borderedText.drawText(
-          canvas, trackedPos.left + cornerSize, trackedPos.top, labelString + "%", boxPaint);
+          canvas, trackedPos.left + cornerSize, trackedPos.top, recognition.title.equals("viseur") ? labelString : labelString + "%", boxPaint);
     }
   }
 
