@@ -29,6 +29,7 @@ import android.graphics.RectF;
 import android.graphics.Typeface;
 import android.media.ImageReader.OnImageAvailableListener;
 import android.os.Build;
+import android.os.Handler;
 import android.os.SystemClock;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
@@ -189,7 +190,7 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
             trackingOverlay.getTop()+(trackingOverlay.getBottom()-trackingOverlay.getTop())/3, //673
             trackingOverlay.getRight()-(trackingOverlay.getRight()-trackingOverlay.getLeft())/3, //720
             trackingOverlay.getBottom()-(trackingOverlay.getBottom()-trackingOverlay.getTop())/3); //1346*/
-    
+
 
 
     ++timestamp;
@@ -217,6 +218,8 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
 
     runInBackground(
         new Runnable() {
+          private boolean isWaiting = false;
+
           @Override
           public void run() {
             LOGGER.i("Running detection on image " + currTimestamp);
@@ -277,24 +280,33 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
                         System.out.println(r.getTitle()+" "+r.getLocation().toShortString()+ " | " + viseur.toShortString() + " | "+r.getLocation().centerX()+" , "+r.getLocation().centerY());
                         if(!r.equals(viseurReco)) // Si c'est PAS le viseur (car viseur ajouté dans la liste des résultats pour qu'il soit affiché, voir plus haut)
 
-                          if(r.getLocation().contains(viseurReco.getLocation())){ //Si le viseur est dans l'objet détecté -> Vibre
-
-                            if(!tts.isSpeaking() && !readedText.equals(r.getTitle())){ // Si on ne parle pas ET que ce n'est pas le même (TODO: enlever condition pas le même -> in/out du rect)
-                              tts.speak(r.getTitle(), TextToSpeech.QUEUE_FLUSH, null, null); // Synthetiseur prononce le label de l'objet
-                              vibrator.vibrate(200); // Vibre
-                              readedText = r.getTitle();
+                          if(r.getLocation().contains(viseurReco.getLocation())){ //Si le viseur est dans l'objet détecté && pas le même
+                            if (readedText.equals(r.getTitle())){ // Si c'est le même
+                              if(!tts.isSpeaking()){
+                                vibrator.vibrate(200); // Vibre
+                                tts.playSilentUtterance(3000,TextToSpeech.QUEUE_FLUSH,null);
+                                readedText = "";
+                              }
+                            }else{
+                              if(!tts.isSpeaking()){
+                                tts.speak(r.getTitle(), TextToSpeech.QUEUE_FLUSH, null, null); // Synthetiseur prononce le label de l'objet
+                                //vibrator.vibrate(200); // Vibre
+                                readedText = r.getTitle();
+                              }
                             }
 
-                          /*//Si le viseur est au centre de l'objet -> Enoncé
-                          if(viseurReco.getLocation().contains(r.getLocation().centerX(),r.getLocation().centerY())){
-                            if(!tts.isSpeaking() && !readedText.equals(r.getTitle())){
-                              tts.speak(r.getTitle(), TextToSpeech.QUEUE_FLUSH, null, null);
-                              readedText = r.getTitle();
+                              /*final Handler handler = new Handler();
+                              handler.postDelayed(new Runnable() {
+                                @Override
+                                public void run() {
+                                  tts.speak(r.getTitle(), TextToSpeech.QUEUE_FLUSH, null, null); // Synthetiseur prononce le label de l'objet
+                                  vibrator.vibrate(200); // Vibre
+                                  readedText = r.getTitle();
+                                }
+                              },5000);*/
                             }
-                          }*/
+
                           }
-
-                      }
                     }
 
 
