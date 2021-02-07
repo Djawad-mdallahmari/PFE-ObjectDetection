@@ -27,8 +27,10 @@ import android.graphics.Paint.Style;
 import android.graphics.Point;
 import android.graphics.RectF;
 import android.graphics.Typeface;
+import android.location.Location;
 import android.media.ImageReader.OnImageAvailableListener;
 import android.os.Build;
+import android.os.Bundle;
 import android.os.Handler;
 import android.os.SystemClock;
 import android.os.VibrationEffect;
@@ -36,6 +38,7 @@ import android.os.Vibrator;
 import android.speech.tts.TextToSpeech;
 import android.util.Size;
 import android.util.TypedValue;
+import android.view.View;
 import android.widget.Toast;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -96,10 +99,21 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
   private String readedText = ""; // Variable utilisé pour stoquer le dernier label de l'objet prononcé
   private RectF viseur; // Utilisé pour représenté le rectangle du viseur
   private Vibrator vibrator; // Pour la vibration
+  private Boolean isMuted = false;
 
   @Override
   public void onPreviewSizeChosen(final Size size, final int rotation) {
     //On entre dans cette fonction qu'une fois au début pour initaliser la taille des input, le détecteur, l'orientation de la camera, ...
+
+    if(tts == null){
+      tts = new TextToSpeech(this, new TextToSpeech.OnInitListener() {
+        @Override
+        public void onInit(int status) {
+          tts.setLanguage(Locale.US); // TODO : put in french. (But model's metadata (labels) are in english !)
+        }
+      });
+    }
+
     final float textSizePx =
         TypedValue.applyDimension(
             TypedValue.COMPLEX_UNIT_DIP, TEXT_SIZE_DIP, getResources().getDisplayMetrics());
@@ -160,22 +174,26 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
           }
         });
 
+    trackingOverlay.setOnClickListener(new View.OnClickListener() {
+      @Override
+      public void onClick(View v) {
+        isMuted = !isMuted;
+        tts.speak(isMuted?"muted":"unmuted", TextToSpeech.QUEUE_FLUSH, null, null);
+        Toast.makeText(
+                DetectorActivity.this,
+                isMuted?"Muted":"Unmuted",
+                Toast.LENGTH_SHORT)
+                .show();
+      }
+    });
+
+
     tracker.setFrameConfiguration(previewWidth, previewHeight, sensorOrientation);
     vibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
   }
 
   @Override
   protected void processImage() { // On entre dans cette fonction dès qu'une image (frame) est disponible <=> très fréquemment
-    //Put elsewehre (TODO : à mettre au dessus pour être initialisé qu'une fois)
-    if(tts == null){
-      tts = new TextToSpeech(this, new TextToSpeech.OnInitListener() {
-        @Override
-        public void onInit(int status) {
-
-        }
-      });
-      tts.setLanguage(Locale.US); // TODO : put in french. (But model's metadata (labels) are in english !)
-    }
 
     //Ci-dessous les tentatives que j'ai faites obtenir le centre de l'écran... à revoir
 
@@ -283,13 +301,13 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
 
                           if(r.getLocation().contains(viseurReco.getLocation())){ //Si le viseur est dans l'objet détecté && pas le même
                             if (readedText.equals(r.getTitle())){ // Si c'est le même
-                              if(!tts.isSpeaking()){
+                              if(!tts.isSpeaking() && !isMuted){
                                 vibrator.vibrate(200); // Vibre
                                 tts.playSilentUtterance(3000,TextToSpeech.QUEUE_FLUSH,null);
                                 readedText = "";
                               }
                             }else{
-                              if(!tts.isSpeaking()){
+                              if(!tts.isSpeaking() && !isMuted){
                                 tts.speak(r.getTitle(), TextToSpeech.QUEUE_FLUSH, null, null); // Synthetiseur prononce le label de l'objet
                                 //vibrator.vibrate(200); // Vibre
                                 readedText = r.getTitle();

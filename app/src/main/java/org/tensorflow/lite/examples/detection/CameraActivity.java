@@ -20,11 +20,15 @@ import android.Manifest;
 import android.app.Fragment;
 import android.content.Context;
 import android.content.pm.PackageManager;
+import android.graphics.Color;
 import android.hardware.Camera;
 import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraCharacteristics;
 import android.hardware.camera2.CameraManager;
 import android.hardware.camera2.params.StreamConfigurationMap;
+import android.location.Location;
+import android.location.LocationListener;
+import android.location.LocationManager;
 import android.media.Image;
 import android.media.Image.Plane;
 import android.media.ImageReader;
@@ -50,6 +54,8 @@ import android.widget.TextView;
 import android.widget.Toast;
 import com.google.android.material.bottomsheet.BottomSheetBehavior;
 import java.nio.ByteBuffer;
+import java.util.List;
+
 import org.tensorflow.lite.examples.detection.env.ImageUtils;
 import org.tensorflow.lite.examples.detection.env.Logger;
 
@@ -57,7 +63,8 @@ public abstract class CameraActivity extends AppCompatActivity
     implements OnImageAvailableListener,
         Camera.PreviewCallback,
         CompoundButton.OnCheckedChangeListener,
-        View.OnClickListener {
+        View.OnClickListener,
+        LocationListener {
   private static final Logger LOGGER = new Logger();
 
   private static final int PERMISSIONS_REQUEST = 1;
@@ -86,6 +93,8 @@ public abstract class CameraActivity extends AppCompatActivity
   private SwitchCompat apiSwitchCompat;
   private TextView threadsTextView;
   private TextView seuilTextView;
+  private TextView toolbarTitle;
+  private LocationManager locationManager;
 
   @Override
   protected void onCreate(final Bundle savedInstanceState) {
@@ -97,6 +106,16 @@ public abstract class CameraActivity extends AppCompatActivity
     Toolbar toolbar = findViewById(R.id.toolbar);
     setSupportActionBar(toolbar);
     getSupportActionBar().setDisplayShowTitleEnabled(false);
+    toolbarTitle = (TextView) toolbar.findViewById(R.id.toolbar_title);
+
+    if(hasPermissionLocation()){
+      locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+      locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, this);
+      locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 0, 0, this);
+    }else{
+      LOGGER.i("Request permission");
+      requestPermissionLocation();
+    }
 
     if (hasPermission()) {
       setFragment();
@@ -173,6 +192,60 @@ public abstract class CameraActivity extends AppCompatActivity
     minusImageView.setOnClickListener(this);
     plusSeuilImageView.setOnClickListener(this);
     minusSeuilImageView.setOnClickListener(this);
+  }
+
+  private void requestPermissionLocation() {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+      if (shouldShowRequestPermissionRationale(Manifest.permission.ACCESS_FINE_LOCATION)
+          && shouldShowRequestPermissionRationale(Manifest.permission.ACCESS_COARSE_LOCATION)
+          && shouldShowRequestPermissionRationale(Manifest.permission.INTERNET)) {
+        Toast.makeText(
+                CameraActivity.this,
+                "Location permission is required for this demo",
+                Toast.LENGTH_LONG)
+                .show();
+      }
+      requestPermissions(new String[] {Manifest.permission.ACCESS_FINE_LOCATION}, PERMISSIONS_REQUEST);
+      requestPermissions(new String[] {Manifest.permission.ACCESS_COARSE_LOCATION}, PERMISSIONS_REQUEST);
+      requestPermissions(new String[] {Manifest.permission.INTERNET}, PERMISSIONS_REQUEST);
+    }
+  }
+
+  private boolean hasPermissionLocation() {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+      return (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED)
+              && (checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED)
+              && (checkSelfPermission(Manifest.permission.INTERNET) == PackageManager.PERMISSION_GRANTED);
+    } else {
+      return true;
+    }
+  }
+
+  @Override
+  public void onLocationChanged(Location location) {
+    LOGGER.i("location: ",location.getLatitude(),location.getLongitude());
+    toolbarTitle.setText("Latitude: "+location.getLatitude()+", Longitude: "+location.getLongitude());
+    toolbarTitle.setTextColor(Color.WHITE);
+    Toast.makeText(
+            CameraActivity.this,
+            "Location changed",
+            Toast.LENGTH_SHORT)
+            .show();
+  }
+
+  @Override
+  public void onStatusChanged(String provider, int status, Bundle extras) {
+    LOGGER.i("Latitude","status",status);
+  }
+
+  @Override
+  public void onProviderEnabled(String provider) {
+    LOGGER.i("Latitude","enable");
+  }
+
+  @Override
+  public void onProviderDisabled(String provider) {
+    LOGGER.i("Latitude","disable");
   }
 
   protected int[] getRgbBytes() {
