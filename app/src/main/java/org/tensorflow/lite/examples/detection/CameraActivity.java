@@ -22,6 +22,10 @@ import android.content.Context;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.hardware.Camera;
+import android.hardware.Sensor;
+import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
+import android.hardware.SensorManager;
 import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraCharacteristics;
 import android.hardware.camera2.CameraManager;
@@ -64,7 +68,8 @@ public abstract class CameraActivity extends AppCompatActivity
         Camera.PreviewCallback,
         CompoundButton.OnCheckedChangeListener,
         View.OnClickListener,
-        LocationListener {
+        LocationListener,
+        SensorEventListener {
   private static final Logger LOGGER = new Logger();
 
   private static final int PERMISSIONS_REQUEST = 1;
@@ -95,6 +100,8 @@ public abstract class CameraActivity extends AppCompatActivity
   private TextView seuilTextView;
   private TextView toolbarTitle;
   private LocationManager locationManager;
+  private SensorManager sensorManager;
+  private Sensor sensor;
 
   @Override
   protected void onCreate(final Bundle savedInstanceState) {
@@ -107,6 +114,9 @@ public abstract class CameraActivity extends AppCompatActivity
     setSupportActionBar(toolbar);
     getSupportActionBar().setDisplayShowTitleEnabled(false);
     toolbarTitle = (TextView) toolbar.findViewById(R.id.toolbar_title);
+    sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
+    sensor = sensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR);
+    sensorManager.registerListener(this,sensor,10000);
 
     if(hasPermissionLocation()){
       locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
@@ -192,6 +202,18 @@ public abstract class CameraActivity extends AppCompatActivity
     minusImageView.setOnClickListener(this);
     plusSeuilImageView.setOnClickListener(this);
     minusSeuilImageView.setOnClickListener(this);
+  }
+
+  @Override
+  public void onSensorChanged(SensorEvent event) {
+    LOGGER.i("xx: "+event.values[0]);
+    LOGGER.i("yy: "+event.values[1]);
+    LOGGER.i("zz: "+event.values[2]);
+  }
+
+  @Override
+  public void onAccuracyChanged(Sensor sensor, int accuracy) {
+
   }
 
   private void requestPermissionLocation() {
