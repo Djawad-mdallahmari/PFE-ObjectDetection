@@ -98,7 +98,8 @@ public abstract class CameraActivity extends AppCompatActivity
   private SwitchCompat apiSwitchCompat;
   private TextView threadsTextView;
   private TextView seuilTextView;
-  private TextView toolbarTitle;
+  private TextView geolocTV;
+  private TextView angleTV;
   private LocationManager locationManager;
   private SensorManager sensorManager;
   private Sensor sensor;
@@ -113,7 +114,8 @@ public abstract class CameraActivity extends AppCompatActivity
     Toolbar toolbar = findViewById(R.id.toolbar);
     setSupportActionBar(toolbar);
     getSupportActionBar().setDisplayShowTitleEnabled(false);
-    toolbarTitle = (TextView) toolbar.findViewById(R.id.toolbar_title);
+    geolocTV = (TextView) toolbar.findViewById(R.id.geoloc_tv);
+    angleTV = (TextView) toolbar.findViewById(R.id.angle_tv);
     sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
     sensor = sensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR);
     sensorManager.registerListener(this,sensor,10000);
@@ -206,9 +208,8 @@ public abstract class CameraActivity extends AppCompatActivity
 
   @Override
   public void onSensorChanged(SensorEvent event) {
-    LOGGER.i("xx: "+event.values[0]);
-    LOGGER.i("yy: "+event.values[1]);
-    LOGGER.i("zz: "+event.values[2]);
+    angleTV.setText("angle: x="+event.values[0]+" y="+event.values[1]+" z="+event.values[2]);
+    angleTV.setTextColor(Color.WHITE);
   }
 
   @Override
@@ -246,13 +247,8 @@ public abstract class CameraActivity extends AppCompatActivity
   @Override
   public void onLocationChanged(Location location) {
     LOGGER.i("location: ",location.getLatitude(),location.getLongitude());
-    toolbarTitle.setText("Latitude: "+location.getLatitude()+", Longitude: "+location.getLongitude());
-    toolbarTitle.setTextColor(Color.WHITE);
-    Toast.makeText(
-            CameraActivity.this,
-            "Location changed",
-            Toast.LENGTH_SHORT)
-            .show();
+    geolocTV.setText("Latitude: "+String.format("%.3f",location.getLatitude())+", Longitude: "+String.format("%.3f",location.getLongitude()));
+    geolocTV.setTextColor(Color.WHITE);
   }
 
   @Override
@@ -626,18 +622,18 @@ public abstract class CameraActivity extends AppCompatActivity
     } else if (v.getId() == R.id.plusSeuil) {
       String seuil = seuilTextView.getText().toString().trim();
       int numSeuil = Integer.parseInt(seuil);
-      if (numSeuil >= 90) return;
-      numSeuil+=10;
+      if (numSeuil >= 98) return;
+      numSeuil+=2;
       System.out.println("numSeuil: "+numSeuil);
       seuilTextView.setText(String.valueOf(numSeuil));
       setNumSeuil(numSeuil);
     } else if (v.getId() == R.id.minusSeuil) {
       String seuil = seuilTextView.getText().toString().trim();
       int numSeuil = Integer.parseInt(seuil);
-      if (numSeuil == 10) {
+      if (numSeuil <= 2) {
         return;
       }
-      numSeuil-=10;
+      numSeuil-=2;
       seuilTextView.setText(String.valueOf(numSeuil));
       setNumSeuil(numSeuil);
     }
