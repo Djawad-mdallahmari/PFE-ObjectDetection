@@ -99,10 +99,14 @@ public abstract class CameraActivity extends AppCompatActivity
   private TextView threadsTextView;
   private TextView seuilTextView;
   private TextView geolocTV;
-  private TextView angleTV;
+  private TextView gyroscopeTV;
+  private TextView proximityTV;
+  private TextView geomagneticTV;
   private LocationManager locationManager;
   private SensorManager sensorManager;
-  private Sensor sensor;
+  private Sensor sensorGyroscope;
+  private Sensor sensorProximity;
+  private Sensor sensorGeomagnetic;
 
   @Override
   protected void onCreate(final Bundle savedInstanceState) {
@@ -115,10 +119,16 @@ public abstract class CameraActivity extends AppCompatActivity
     setSupportActionBar(toolbar);
     getSupportActionBar().setDisplayShowTitleEnabled(false);
     geolocTV = (TextView) toolbar.findViewById(R.id.geoloc_tv);
-    angleTV = (TextView) toolbar.findViewById(R.id.angle_tv);
+    gyroscopeTV = (TextView) toolbar.findViewById(R.id.gyroscope_tv);
+    proximityTV = (TextView) toolbar.findViewById(R.id.proximity_tv);
+    geomagneticTV = (TextView) toolbar.findViewById(R.id.geomagnetic_tv);
     sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
-    sensor = sensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR);
-    sensorManager.registerListener(this,sensor,10000);
+    sensorGyroscope = sensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR);
+    sensorProximity = sensorManager.getDefaultSensor(Sensor.TYPE_PROXIMITY);
+    sensorGeomagnetic = sensorManager.getDefaultSensor(Sensor.TYPE_GEOMAGNETIC_ROTATION_VECTOR);
+    sensorManager.registerListener(this,sensorGyroscope,10000);
+    sensorManager.registerListener(this,sensorProximity,10000);
+    sensorManager.registerListener(this,sensorGeomagnetic,10000);
 
     if(hasPermissionLocation()){
       locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
@@ -208,8 +218,18 @@ public abstract class CameraActivity extends AppCompatActivity
 
   @Override
   public void onSensorChanged(SensorEvent event) {
-    angleTV.setText("angle: x="+event.values[0]+" y="+event.values[1]+" z="+event.values[2]);
-    angleTV.setTextColor(Color.WHITE);
+    if(event.sensor.getType() == Sensor.TYPE_ROTATION_VECTOR){
+      gyroscopeTV.setText("gyroscope: x="+event.values[0]+" y="+event.values[1]+" z="+event.values[2]);
+      gyroscopeTV.setTextColor(Color.WHITE);
+    }
+    if(event.sensor.getType() == Sensor.TYPE_PROXIMITY){
+      proximityTV.setText("proximité: "+event.values[0]+" cm");
+      proximityTV.setTextColor(Color.WHITE);
+    }
+    if (event.sensor.getType() == Sensor.TYPE_GEOMAGNETIC_ROTATION_VECTOR){
+      geomagneticTV.setText("geomagnetique: x="+event.values[0]+" y="+event.values[1]+" z="+event.values[2]);
+      geomagneticTV.setTextColor(Color.WHITE);
+    }
   }
 
   @Override
